@@ -1,0 +1,31 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED FOR PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-07-25T00:00:00-04:00",
+    "name": "StrikeGate Multi-Tenant",
+    "author": "info@s2th.dev",
+    "description": "StrikeGate multi-tenant Minecraft proxy built from the feature/multi-tenant-routes branch of Isitseth/StrikeGate. Supports per-route forwarding, secrets, MOTDs, aliases, disabling, and backend failover in classic proxy mode.",
+    "features": null,
+    "docker_images": {
+        "ghcr.io/pterodactyl/yolks:debian": "ghcr.io/pterodactyl/yolks:debian"
+    },
+    "file_denylist": [],
+    "startup": "./gate",
+    "config": {
+        "files": "{\r\n    \"config.yml\": {\r\n        \"parser\": \"yaml\",\r\n        \"find\": {\r\n            \"config.bind\": \"0.0.0.0:{{server.build.default.port}}\"\r\n        }\r\n    }\r\n}",
+        "startup": "{\r\n    \"done\": \"listening for connections\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\r\nset -Eeuo pipefail\r\n\r\nSERVER_DIR=\"/mnt/server\"\r\nNEW_BINARY=\"${SERVER_DIR}/gate.new\"\r\nBINARY_URL=\"https://github.com/Isitseth/StrikeGate/raw/refs/heads/feature/multi-tenant-routes/dist/gate_linux_amd64\"\r\nCONFIG_URL=\"https://github.com/Isitseth/StrikeGate/raw/refs/heads/feature/multi-tenant-routes/config.yml\"\r\nEXPECTED_SHA256=\"27705918d262d53a11a5827b3477eef404cba040530d7903ac244a75a37e0282\"\r\n\r\nfailed() {\r\n    code=$?\r\n    rm -f \"${NEW_BINARY}\"\r\n    echo \"ERROR: StrikeGate download installation failed with exit code ${code}.\"\r\n    exit \"${code}\"\r\n}\r\ntrap failed ERR\r\n\r\napt-get update\r\napt-get install -y --no-install-recommends ca-certificates curl\r\n\r\necho \"Downloading the prebuilt StrikeGate multi-tenant binary...\"\r\ncurl --fail --location --retry 3 --output \"${NEW_BINARY}\" \"${BINARY_URL}\"\r\necho \"${EXPECTED_SHA256}  ${NEW_BINARY}\" | sha256sum --check --status\r\nchmod 0755 \"${NEW_BINARY}\"\r\nmv -f \"${NEW_BINARY}\" \"${SERVER_DIR}/gate\"\r\n\r\nif [ ! -f \"${SERVER_DIR}/config.yml\" ]; then\r\n    curl --fail --location --retry 3 --output \"${SERVER_DIR}/config.yml\" \"${CONFIG_URL}\"\r\n    echo \"Installed the branch configuration template.\"\r\nelse\r\n    echo \"Preserved existing config.yml.\"\r\nfi\r\n\r\ntrap - ERR\r\necho \"StrikeGate installed successfully.\"\r\nls -lh \"${SERVER_DIR}/gate\"\r\n",
+            "container": "debian:bookworm-slim",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": []
+}
