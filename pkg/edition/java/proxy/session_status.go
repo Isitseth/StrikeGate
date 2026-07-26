@@ -126,6 +126,7 @@ func (h *statusSessionHandler) handleStatusRequest(pc *proto.PacketContext) {
 		host := strings.ToLower(netutil.HostStr(lite.ClearVirtualHost(h.inbound.VirtualHost().String())))
 		if route := h.config().MatchRoute(host); route != nil {
 			e.ping.Description = route.EffectiveMotd(h.config().Status.Motd)
+			e.ping.Favicon = route.EffectiveFavicon(h.config().Status.Favicon)
 		}
 	} else {
 		var err error

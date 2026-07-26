@@ -8,6 +8,7 @@ import (
 
 	"go.minekube.com/common/minecraft/component"
 	"go.minekube.com/gate/pkg/util/configutil"
+	"go.minekube.com/gate/pkg/util/favicon"
 	"go.minekube.com/gate/pkg/util/validation"
 	"gopkg.in/yaml.v3"
 )
@@ -20,6 +21,7 @@ type Route struct {
 	Backends        []RouteBackend            `yaml:"backends,omitempty" json:"backends,omitempty"`
 	Forwarding      *RouteForwarding          `yaml:"forwarding,omitempty" json:"forwarding,omitempty"`
 	Motd            *configutil.Component     `yaml:"motd,omitempty" json:"motd,omitempty"`
+	Favicon         *favicon.Favicon          `yaml:"favicon,omitempty" json:"favicon,omitempty"`
 	Enabled         *bool                     `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 	DisabledMessage *configutil.TextComponent `yaml:"disabledMessage,omitempty" json:"disabledMessage,omitempty"`
 	RetryLimit      int                       `yaml:"retryLimit,omitempty" json:"retryLimit,omitempty"`
@@ -86,6 +88,13 @@ func (r *Route) EffectiveMotd(global *configutil.Component) component.Component 
 		return nil
 	}
 	return global.C()
+}
+
+func (r *Route) EffectiveFavicon(global favicon.Favicon) favicon.Favicon {
+	if r != nil && r.Favicon != nil {
+		return *r.Favicon
+	}
+	return global
 }
 
 func (r *Route) BackendList() []RouteBackend {

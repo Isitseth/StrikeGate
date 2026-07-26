@@ -139,6 +139,7 @@ config:
   #     enabled: true # Defaults to true when omitted.
   #     disabledMessage: "§cThis route is temporarily unavailable."
   #     motd: "§bCustomer 1"
+  #     favicon: customer1-icon.png # Optional 64x64 PNG; global icon is the fallback.
   #     forwarding:
   #       mode: velocity # none, legacy, velocity, or bungeeguard
   #       secret: customer-secret

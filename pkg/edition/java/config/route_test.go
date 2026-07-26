@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.minekube.com/gate/pkg/util/favicon"
 	"gopkg.in/yaml.v3"
 )
 
@@ -140,4 +141,13 @@ routes:
 	require.NotNil(t, route)
 	require.Equal(t, route.Motd.C(), route.EffectiveMotd(cfg.Status.Motd))
 	require.Equal(t, cfg.Status.Motd.C(), (*Route)(nil).EffectiveMotd(cfg.Status.Motd))
+}
+
+func TestRouteFaviconOverrideAndGlobalFallback(t *testing.T) {
+	global := favicon.Favicon("data:image/png;base64,global")
+	custom := favicon.Favicon("data:image/png;base64,route")
+	route := &Route{Favicon: &custom}
+	require.Equal(t, custom, route.EffectiveFavicon(global))
+	require.Equal(t, global, (&Route{}).EffectiveFavicon(global))
+	require.Equal(t, global, (*Route)(nil).EffectiveFavicon(global))
 }
