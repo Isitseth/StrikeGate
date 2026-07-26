@@ -41,6 +41,7 @@ var DefaultConfig = Config{
 	Servers:                              map[string]string{},
 	Try:                                  []string{},
 	ForcedHosts:                          map[string][]string{},
+	Routes:                               []Route{},
 	FailoverOnUnexpectedServerDisconnect: true,
 	ConnectionTimeout:                    configutil.Duration(5000 * time.Millisecond),
 	ReadTimeout:                          configutil.Duration(30000 * time.Millisecond),
@@ -106,6 +107,7 @@ type Config struct { // TODO use https://github.com/projectdiscovery/yamldoc-go 
 	Servers                              map[string]string `yaml:"servers,omitempty" json:"servers,omitempty"` // name:address
 	Try                                  []string          `yaml:"try,omitempty" json:"try,omitempty"`         // Try server names order
 	ForcedHosts                          ForcedHosts       `yaml:"forcedHosts,omitempty" json:"forcedHosts,omitempty"`
+	Routes                               []Route           `yaml:"routes,omitempty" json:"routes,omitempty"`
 	FailoverOnUnexpectedServerDisconnect bool              `yaml:"failoverOnUnexpectedServerDisconnect,omitempty" json:"failoverOnUnexpectedServerDisconnect,omitempty"`
 
 	ConnectionTimeout configutil.Duration `yaml:"connectionTimeout,omitempty" json:"connectionTimeout,omitempty"` // Write timeout
@@ -151,8 +153,8 @@ type (
 	}
 	Forwarding struct {
 		Mode              ForwardingMode `yaml:"mode"`
-		VelocitySecret    string         `yaml:"velocitySecret"`    // Used with "velocity" mode
-		BungeeGuardSecret string         `yaml:"bungeeGuardSecret"` // Used with "bungeeguard" mode
+		VelocitySecret    Secret         `yaml:"velocitySecret" json:"-"`    // Used with "velocity" mode
+		BungeeGuardSecret Secret         `yaml:"bungeeGuardSecret" json:"-"` // Used with "bungeeguard" mode
 	}
 	Via struct {
 		Enabled     bool   `yaml:"enabled,omitempty" json:"enabled,omitempty"`
@@ -295,6 +297,8 @@ func (c *Config) Validate() (warns []error, errs []error) {
 			}
 		}
 	}
+
+	validateRoutes(c, e)
 
 	if c.Compression.Level < -1 || c.Compression.Level > 9 {
 		e("Unsupported compression level %d: must be -1..9", c.Compression.Level)

@@ -132,6 +132,27 @@ config:
   # Note: Players connecting via IP address or unmatched hostnames will use the 'try' list above.
   # For lightweight deployments, see Gate Lite mode which provides similar host-based routing.
   forcedHosts: {}
+  # Extended classic forced-host routes. Existing forcedHosts above remain supported.
+  # Exact hostnames take priority over wildcards and aliases are case-insensitive.
+  # routes:
+  #   - hostnames: [play.customer1.com, mc.customer1.com]
+  #     enabled: true # Defaults to true when omitted.
+  #     disabledMessage: "§cThis route is temporarily unavailable."
+  #     motd: "§bCustomer 1"
+  #     forwarding:
+  #       mode: velocity # none, legacy, velocity, or bungeeguard
+  #       secret: customer-secret
+  #     retryLimit: 2 # 0 means try every configured backend once.
+  #     backends:
+  #       - id: primary
+  #         address: 203.0.113.10:25565
+  #         priority: 1
+  #       - id: backup
+  #         address: 203.0.113.11:25565
+  #         priority: 2
+  #   - hostnames: ["*.customer2.example"]
+  #     backend: 203.0.113.20:25565 # Legacy single-backend shorthand.
+  routes: []
   # The quota settings allows rate-limiting IP (last block cut off) for certain operations.
   # ops: The allowed operations per second.
   # burst: The maximum operations per second (queue like). One burst unit per seconds is refilled.

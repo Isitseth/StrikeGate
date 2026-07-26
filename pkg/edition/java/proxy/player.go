@@ -168,6 +168,8 @@ type connectedPlayer struct {
 
 	serversToTry []string // names of servers to try if we got disconnected from previous
 	tryIndex     int
+	route        *config.Route // immutable snapshot selected when the player connected
+	routeServers []string
 }
 
 var _ Player = (*connectedPlayer)(nil)
@@ -200,6 +202,11 @@ func newConnectedPlayer(
 		ping:               ping,
 		permFunc:           func(string) permission.TriState { return permission.Undefined },
 		playerKey:          playerKey,
+	}
+	p.route = sessionHandlerDeps.config().MatchRoute(p.getVirtualHostname())
+	if p.route != nil {
+		p.routeServers = sessionHandlerDeps.proxy.orderRouteServers(
+			sessionHandlerDeps.config().RouteServerNames(p.route))
 	}
 	p.resourcePackHandler = resourcepack.NewHandler(p, p.eventMgr)
 	p.bundleHandler = &resourcepack.BundleDelimiterHandler{Player: p}
@@ -502,7 +509,11 @@ func (p *connectedPlayer) nextServerToTry(current RegisteredServer) RegisteredSe
 	if len(p.serversToTry) == 0 {
 		// Extract hostname from virtual host and convert to lowercase
 		virtualHostStr := p.getVirtualHostname()
-		p.serversToTry = p.config().ForcedHosts[virtualHostStr]
+		if p.route != nil {
+			p.serversToTry = append([]string(nil), p.routeServers...)
+		} else {
+			p.serversToTry = p.config().ForcedHosts[virtualHostStr]
+		}
 	}
 	if len(p.serversToTry) == 0 {
 		connOrder := p.config().Try
@@ -531,6 +542,20 @@ func (p *connectedPlayer) nextServerToTry(current RegisteredServer) RegisteredSe
 		}
 	}
 	return nil
+}
+
+func (p *connectedPlayer) forwarding() config.Forwarding {
+	if p == nil || p.sessionHandlerDeps == nil || p.configProvider == nil {
+		return config.Forwarding{}
+	}
+	return p.effectiveForwarding(p.config().Forwarding)
+}
+
+func (p *connectedPlayer) effectiveForwarding(global config.Forwarding) config.Forwarding {
+	if p == nil {
+		return global
+	}
+	return p.route.EffectiveForwarding(global)
 }
 
 // getVirtualHostname extracts the hostname from the virtual host address and converts it to lowercase.

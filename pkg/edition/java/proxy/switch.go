@@ -115,6 +115,7 @@ type connectionRequest struct {
 
 func (c *connectionRequest) connect(ctx context.Context) (*connectionResult, error) {
 	result, err := c.internalConnect(ctx)
+	c.player.proxy.recordBackendResult(c.server, err == nil && result != nil && result.Status().Successful())
 	if err == nil && !result.Status().Successful() {
 		if !result.safe {
 			// It's not safe to continue the connection, we need to shut it down.
@@ -139,9 +140,11 @@ func (c *connectionRequest) Connect(ctx context.Context) (ConnectionResult, erro
 func (c *connectionRequest) ConnectWithIndication(ctx context.Context) (successful bool) {
 	result, err := c.internalConnect(ctx)
 	if err != nil {
+		c.player.proxy.recordBackendResult(c.server, false)
 		c.player.handleConnectionErr(c.server, err, true)
 		return false
 	}
+	c.player.proxy.recordBackendResult(c.server, result.Status().Successful())
 
 	switch result.Status() {
 	case AlreadyConnectedConnectionStatus:

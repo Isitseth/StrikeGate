@@ -60,6 +60,7 @@ type Proxy struct {
 	muS           sync.RWMutex                 // Protects following fields
 	servers       map[string]*registeredServer // registered backend servers: by lower case names
 	configServers map[string]bool              // tracks which servers came from config (vs API)
+	backendHealth map[string]backendHealth
 
 	muP         sync.RWMutex                   // Protects following fields
 	playerNames map[string]*connectedPlayer    // lower case usernames map
@@ -120,6 +121,7 @@ func New(options Options) (p *Proxy, err error) {
 		channelRegistrar: message.NewChannelRegistrar(),
 		servers:          map[string]*registeredServer{},
 		configServers:    map[string]bool{},
+		backendHealth:    map[string]backendHealth{},
 		playerNames:      map[string]*connectedPlayer{},
 		playerIDs:        map[uuid.UUID]*connectedPlayer{},
 		authenticator:    authn,
@@ -324,15 +326,22 @@ func (p *Proxy) init() (err error) {
 
 	if !c.Lite.Enabled {
 		// Sync servers: register new/updated servers and unregister removed servers
-		if len(c.Servers) != 0 {
-			p.log.Info("syncing servers...", "count", len(c.Servers))
+		configuredServers := make(map[string]string, len(c.Servers)+len(c.RouteServers()))
+		for name, addr := range c.Servers {
+			configuredServers[name] = addr
+		}
+		for name, addr := range c.RouteServers() {
+			configuredServers[name] = addr
+		}
+		if len(configuredServers) != 0 {
+			p.log.Info("syncing servers...", "count", len(configuredServers))
 		}
 
 		// Track which servers should exist after sync
 		expectedServers := make(map[string]ServerInfo)
 
 		// Process servers from config
-		for name, addr := range c.Servers {
+		for name, addr := range configuredServers {
 			pAddr, err := netutil.Parse(addr, "tcp")
 			if err != nil {
 				return fmt.Errorf("error parsing server %q address %q: %w", name, addr, err)

@@ -158,7 +158,16 @@ func (h *handshakeSessionHandler) handleLogin(p *packet.Handshake, inbound *init
 
 	// If the proxy is configured for velocity's forwarding mode, we must deny connections from 1.12.2
 	// and lower, otherwise IP information will never get forwarded.
-	if h.config().Forwarding.Mode == config.VelocityForwardingMode &&
+	route := h.config().MatchRoute(strings.ToLower(netutil.HostStr(lite.ClearVirtualHost(inbound.VirtualHost().String()))))
+	if reason := disabledRouteReason(route); reason != nil {
+		_ = inbound.disconnect(reason)
+		return
+	}
+	forwarding := h.config().Forwarding
+	if route != nil {
+		forwarding = route.EffectiveForwarding(forwarding)
+	}
+	if forwarding.Mode == config.VelocityForwardingMode &&
 		p.ProtocolVersion < int(version.Minecraft_1_13.Protocol) {
 		_ = netmc.CloseWith(h.conn, packet.NewDisconnect(&component.Text{
 			Content: "This server is only compatible with versions 1.13 and above.",
@@ -170,6 +179,16 @@ func (h *handshakeSessionHandler) handleLogin(p *packet.Handshake, inbound *init
 	h.eventMgr.Fire(&ConnectionHandshakeEvent{inbound: lic, intent: p.Intent()})
 	handler := newInitialLoginSessionHandler(h.conn, lic, h.sessionHandlerDeps)
 	h.conn.SetActiveSessionHandler(state.Login, handler)
+}
+
+func disabledRouteReason(route *config.Route) component.Component {
+	if route == nil || route.IsEnabled() {
+		return nil
+	}
+	if route.DisabledMessage != nil {
+		return route.DisabledMessage.T()
+	}
+	return &component.Text{Content: "This route is currently disabled."}
 }
 
 func stateForProtocol(status int) *state.Registry {

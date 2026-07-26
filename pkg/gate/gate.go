@@ -337,10 +337,10 @@ func LoadConfig(v *viper.Viper) (*config.Config, error) {
 	// This allows environment variables to override config file values
 	// Set custom environment variable names for forwarding secrets
 	if velocitySecret := v.GetString("velocitySecret"); velocitySecret != "" {
-		cfg.Config.Forwarding.VelocitySecret = velocitySecret
+		cfg.Config.Forwarding.VelocitySecret = jconfig.Secret(velocitySecret)
 	}
 	if bungeeGuardSecret := v.GetString("bungeeGuardSecret"); bungeeGuardSecret != "" {
-		cfg.Config.Forwarding.BungeeGuardSecret = bungeeGuardSecret
+		cfg.Config.Forwarding.BungeeGuardSecret = jconfig.Secret(bungeeGuardSecret)
 	}
 
 	// Normalize forced hosts keys to lowercase

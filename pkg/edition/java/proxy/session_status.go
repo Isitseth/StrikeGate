@@ -6,16 +6,19 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"syscall"
 
 	"github.com/go-logr/logr"
 	"go.minekube.com/gate/pkg/edition/java/forge/modinfo"
+	"go.minekube.com/gate/pkg/edition/java/lite"
 	"go.minekube.com/gate/pkg/edition/java/netmc"
 	"go.minekube.com/gate/pkg/edition/java/ping"
 	"go.minekube.com/gate/pkg/edition/java/proto/packet"
 	"go.minekube.com/gate/pkg/edition/java/proto/version"
 	"go.minekube.com/gate/pkg/gate/proto"
 	"go.minekube.com/gate/pkg/util/errs"
+	"go.minekube.com/gate/pkg/util/netutil"
 )
 
 type statusSessionHandler struct {
@@ -120,6 +123,10 @@ func (h *statusSessionHandler) handleStatusRequest(pc *proto.PacketContext) {
 	log := h.log
 	if h.resolvePingResponse == nil {
 		e.ping = newInitialPing(h.proxy, pc.Protocol)
+		host := strings.ToLower(netutil.HostStr(lite.ClearVirtualHost(h.inbound.VirtualHost().String())))
+		if route := h.config().MatchRoute(host); route != nil {
+			e.ping.Description = route.EffectiveMotd(h.config().Status.Motd)
+		}
 	} else {
 		var err error
 		var res *packet.StatusResponse

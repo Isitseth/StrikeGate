@@ -1,12 +1,14 @@
 package proxy
 
 import (
+	"strings"
 	"sync/atomic"
 
 	"github.com/go-logr/logr"
 	"github.com/robinbraemer/event"
 	"go.minekube.com/common/minecraft/component"
 	"go.minekube.com/gate/pkg/edition/java/config"
+	"go.minekube.com/gate/pkg/edition/java/lite"
 	"go.minekube.com/gate/pkg/edition/java/netmc"
 	"go.minekube.com/gate/pkg/edition/java/profile"
 	"go.minekube.com/gate/pkg/edition/java/proto/packet"
@@ -16,6 +18,7 @@ import (
 	"go.minekube.com/gate/pkg/edition/java/proxy/crypto"
 	"go.minekube.com/gate/pkg/edition/java/proxy/phase"
 	"go.minekube.com/gate/pkg/gate/proto"
+	"go.minekube.com/gate/pkg/util/netutil"
 	"go.minekube.com/gate/pkg/util/uuid"
 )
 
@@ -75,9 +78,13 @@ func (a *authSessionHandler) Disconnected() {
 }
 
 func (a *authSessionHandler) Activated() {
+	forwarding := a.config().Forwarding
+	if route := a.config().MatchRoute(strings.ToLower(netutil.HostStr(lite.ClearVirtualHost(a.inbound.VirtualHost().String())))); route != nil {
+		forwarding = route.EffectiveForwarding(forwarding)
+	}
 	// Some connection types may need to alter the game profile.
 	gameProfile := *a.inbound.delegate.Type().AddGameProfileTokensIfRequired(
-		a.profile, a.config().Forwarding.Mode)
+		a.profile, forwarding.Mode)
 	profileRequest := NewGameProfileRequestEvent(a.inbound, gameProfile, a.onlineMode)
 	a.eventMgr.Fire(profileRequest)
 	conn := a.inbound.delegate.MinecraftConn
@@ -138,7 +145,8 @@ func (a *authSessionHandler) startLoginCompletion(player *connectedPlayer) {
 
 	// Send login success
 	playerID := player.ID()
-	if cfg.Forwarding.Mode == config.NoneForwardingMode {
+	forwarding := player.forwarding()
+	if forwarding.Mode == config.NoneForwardingMode {
 		playerID = uuid.OfflinePlayerUUID(player.Username())
 	}
 

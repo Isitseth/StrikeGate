@@ -114,8 +114,8 @@ func (b *backendLoginSessionHandler) handleLoginPluginMessage(p *packet.LoginPlu
 	if !ok {
 		return
 	}
-	cfg := b.config()
-	if cfg.Forwarding.Mode == config.VelocityForwardingMode && p.Channel == velocity.IpForwardingChannel {
+	forwarding := b.serverConn.player.effectiveForwarding(b.config().Forwarding)
+	if forwarding.Mode == config.VelocityForwardingMode && p.Channel == velocity.IpForwardingChannel {
 
 		requestedForwardingVersion := velocity.DefaultForwardingVersion
 		// Check version
@@ -124,7 +124,7 @@ func (b *backendLoginSessionHandler) handleLoginPluginMessage(p *packet.LoginPlu
 		}
 
 		forwardingData, err := velocity.CreateForwardingData(
-			[]byte(cfg.Forwarding.VelocitySecret),
+			[]byte(forwarding.VelocitySecret),
 			netutil.Host(b.serverConn.Player().RemoteAddr()),
 			b.serverConn.player, requestedForwardingVersion,
 		)
@@ -231,7 +231,7 @@ var velocityIpForwardingFailure = &component.Text{
 }
 
 func (b *backendLoginSessionHandler) handleServerLoginSuccess() {
-	if b.config().Forwarding.Mode == config.VelocityForwardingMode && !b.informationForwarded.Load() {
+	if b.serverConn.player.effectiveForwarding(b.config().Forwarding).Mode == config.VelocityForwardingMode && !b.informationForwarded.Load() {
 		b.requestCtx.result(disconnectResult(velocityIpForwardingFailure, b.serverConn.server, true), nil)
 		b.serverConn.disconnect()
 		return
@@ -326,7 +326,8 @@ func (b *backendLoginSessionHandler) handleServerLoginSuccess() {
 }
 
 func (b *backendLoginSessionHandler) Disconnected() {
-	if b.config().Forwarding.Mode == config.LegacyForwardingMode || b.config().Forwarding.Mode == config.BungeeGuardForwardingMode {
+	mode := b.serverConn.player.effectiveForwarding(b.config().Forwarding).Mode
+	if mode == config.LegacyForwardingMode || mode == config.BungeeGuardForwardingMode {
 		b.requestCtx.result(nil, errs.NewSilentErr(`The connection to the remote server was unexpectedly closed.
 This is usually because the remote server does not have BungeeCord IP forwarding correctly enabled.`))
 	} else {

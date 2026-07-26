@@ -397,13 +397,14 @@ func (s *serverConnection) handshakeAddr(vHost string, player Player) (string, e
 	usedForwarding := false
 	if ha, ok = s.Server().ServerInfo().(HandshakeAddresser); !ok {
 		if ha, ok = s.Server().(HandshakeAddresser); !ok {
-			switch s.config().Forwarding.Mode {
+			forwarding := s.player.forwarding()
+			switch forwarding.Mode {
 			case config.LegacyForwardingMode:
 				vHost = s.createLegacyForwardingAddress()
 				usedForwarding = true
 			case config.BungeeGuardForwardingMode:
-				secret := s.config().Forwarding.BungeeGuardSecret
-				vHost = s.createBungeeGuardForwardingAddress(secret)
+				secret := forwarding.BungeeGuardSecret
+				vHost = s.createBungeeGuardForwardingAddress(string(secret))
 				usedForwarding = true
 			}
 		}
